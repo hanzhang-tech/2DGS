@@ -70,3 +70,40 @@ class MiniCam:
         self.full_proj_transform = full_proj_transform
         view_inv = torch.inverse(self.world_view_transform)
         self.camera_center = view_inv[3][:3]
+
+class InferenceCamera(nn.Module):
+    def __init__(self, image_name, R, T, width, height, fovx, fovy, znear=0.01, zfar=100.0):
+        """
+        通用推理相机。
+        
+        Args:
+            image_name (str): 图片名字，用于导出文件名
+            R (np.array): 3x3 旋转矩阵 (World-to-Camera)
+            T (np.array): 3x1 平移向量 (World-to-Camera)
+            width (int): 图像宽
+            height (int): 图像高
+            fovx (float): 水平视场角 (弧度)
+            fovy (float): 垂直视场角 (弧度)
+        """
+        super(InferenceCamera, self).__init__()
+        
+        self.image_name = image_name
+        self.image_width = width
+        self.image_height = height
+        self.FoVx = fovx
+        self.FoVy = fovy
+        self.znear = znear
+        self.zfar = zfar
+
+        # 使用 utils.graphics_utils 中的标准函数构建变换矩阵
+        # 这里的 R 和 T 必须已经是 World-to-Camera 坐标系下的了
+        self.world_view_transform = torch.tensor(getWorld2View2(R, T)).transpose(0, 1).cuda()
+        
+        # 构建投影矩阵
+        self.projection_matrix = getProjectionMatrix(znear=self.znear, zfar=self.zfar, fovX=self.FoVx, fovY=self.FoVy).transpose(0,1).cuda()
+        
+        # 构建 MVP 矩阵
+        self.full_proj_transform = (self.world_view_transform.unsqueeze(0).bmm(self.projection_matrix.unsqueeze(0))).squeeze(0)
+        
+        # 计算相机中心 (用于高斯排序) - 取 W2C 的逆矩阵的平移部分
+        self.camera_center = self.world_view_transform.inverse()[3, :3]

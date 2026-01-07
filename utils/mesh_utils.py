@@ -294,3 +294,54 @@ class GaussianExtractor(object):
             # save_img_u8(self.normals[idx].permute(1,2,0).cpu().numpy() * 0.5 + 0.5, os.path.join(vis_path, 'normal_{0:05d}'.format(idx) + ".png"))
             # save_img_u8(self.depth_normals[idx].permute(1,2,0).cpu().numpy() * 0.5 + 0.5, os.path.join(vis_path, 'depth_normal_{0:05d}'.format(idx) + ".png"))
 
+    @torch.no_grad()
+    def export_image_custom(self, path):
+        """
+        自定义导出函数：
+        1. 保存 RGB 图像 (PNG)
+        2. 保存 深度图 (NPY)
+        3. 文件名保持与输入一致
+        """
+        # 1. 准备输出目录
+        # 为了整洁，我们还是分别放在 rgb 和 depth 文件夹下
+        rgb_path = os.path.join(path, "rgb")
+        depth_path = os.path.join(path, "depth")
+        
+        os.makedirs(rgb_path, exist_ok=True)
+        os.makedirs(depth_path, exist_ok=True)
+
+        for idx, viewpoint_cam in tqdm(enumerate(self.viewpoint_stack), desc="export custom images"):
+            # 2. 获取原始文件名
+            # 【注意】这里假设你的相机对象里存了 image_name 这个属性
+            # 如果是 MiniCam，请确保初始化时 self.image_name = filename
+            if hasattr(viewpoint_cam, 'image_name'):
+                base_name = os.path.basename(viewpoint_cam.image_name)
+            elif hasattr(viewpoint_cam, 'name'):
+                base_name = os.path.basename(viewpoint_cam.name)
+            else:
+                # 如果都没有，只能回退到用数字命名，防止报错
+                base_name = '{0:05d}.png'.format(idx)
+
+            # --- 保存 RGB (PNG) ---
+            # 获取 Tensor -> (C,H,W) -> 转为 numpy (H,W,C)
+            rgb_tensor = self.rgbmaps[idx]
+            rgb_np = rgb_tensor.permute(1, 2, 0).clamp(0.0, 1.0).cpu().numpy()
+            
+            # 使用 PIL 保存，文件名保持不变 (例如 seq-01.png)
+            # 这里的 save_img_u8 可以替换为 PIL 的 Image.fromarray，为了不依赖 utils 我直接写通用写法
+            from PIL import Image
+            Image.fromarray((rgb_np * 255).astype(np.uint8)).save(os.path.join(rgb_path, base_name))
+
+            # --- 保存 Depth (NPY) ---
+            # 获取 Tensor -> squeeze 变成 (H,W) -> 转为 numpy
+            depth_tensor = self.depthmaps[idx]
+            depth_np = depth_tensor.squeeze().cpu().numpy()
+
+            # 修改后缀：把 .png (或 .jpg) 替换为 .npy
+            file_root, _ = os.path.splitext(base_name)
+            npy_name = file_root + ".npy"
+            
+            # 保存为 npy
+            np.save(os.path.join(depth_path, npy_name), depth_np)
+            
+        print(f"Export done. RGB saved to {rgb_path}, Depth saved to {depth_path}")

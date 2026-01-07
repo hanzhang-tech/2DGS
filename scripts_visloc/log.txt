@@ -1,0 +1,20 @@
+##
+env: gs
+
+##
+GS-CPR/ACT/data/7scenes里面txt转bin
+colmap model_converter --input_path sparse/0 --output_path sparse/0 --output_type BIN
+
+
+
+dataset_readers.py 99，100 readname
+
+
+## train
+CUDA_VISIBLE_DEVICES=3 python ./train.py -s /home/zhangh/GS-CPR/ACT_Scaffold_GS/data/7scenes/scene_heads/train -m/data/zhangh/visual_localization/7_scenes/2dgs/heads/model
+
+## render
+CUDA_VISIBLE_DEVICES=3 python render_7scenes.py --model_path /data/zhangh/visual_localization/7_scenes/2dgs/fire/model --pose_file /home/zhangh/GS-CPR/coarse_poses/ace/7Scenes_pgt/poses_pgt_7scenes_fire_.txt --scene_name fire --output_path /data/zhangh/visual_localization/7_scenes/2dgs/fire/render_result
+
+## 数据
+模型和渲染结果：/data/zhangh/visual_localization/7_scenes/2dgs
