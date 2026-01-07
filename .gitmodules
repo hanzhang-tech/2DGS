@@ -4,9 +4,4 @@
 [submodule "submodules/simple-knn"]
 	path = submodules/simple-knn
 	url = https://gitlab.inria.fr/bkerbl/simple-knn.git
-[submodule "diff-surfel-rasterization"]
-	path = diff-surfel-rasterization
-	url = https://github.com/hbb1/diff-surfel-rasterization.git
-[submodule "simple-knn"]
-	path = simple-knn
-	url = https://gitlab.inria.fr/bkerbl/simple-knn.git
+
